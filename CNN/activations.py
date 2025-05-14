@@ -1,46 +1,22 @@
-import numpy as np
+import tensorflow as tf
 from layer import Layer
-from activation import Activation
-
-class Tanh(Activation):
-    def __init__(self):
-        def tanh(x):
-            return np.tanh(x)
-
-        def tanh_prime(x):
-            return 1 - np.tanh(x) ** 2
-
-        super().__init__(tanh, tanh_prime)
-
-class Sigmoid(Activation):
-    def __init__(self):
-        def sigmoid(x):
-            return 1 / (1 + np.exp(-x))
-
-        def sigmoid_prime(x):
-            s = sigmoid(x)
-            return s * (1 - s)
-
-        super().__init__(sigmoid, sigmoid_prime)
 
 class Softmax(Layer):
     def forward(self, input):
-        tmp = np.exp(input)
-        self.output = tmp / np.sum(tmp)
+        exp_input = tf.exp(input - tf.reduce_max(input, axis=1, keepdims=True))  # stabilisasi numerik
+        self.output = exp_input / tf.reduce_sum(exp_input, axis=1, keepdims=True)
         return self.output
-    
-    def backward(self, output_gradient, learning_rate):
-        # This version is faster than the one presented in the video
-        n = np.size(self.output)
-        return np.dot((np.identity(n) - self.output.T) * self.output, output_gradient)
-        # Original formula:
-        # tmp = np.tile(self.output, n)
-        # return np.dot(tmp * (np.identity(n) - np.transpose(tmp)), output_gradient)
 
-class ReLU:
+    def backward(self, output_gradient, learning_rate):
+        # Softmax grad: dL/dz = y_pred - y_true sudah dihitung di loss
+        # Jadi grad sudah dihitung dari luar, tinggal diteruskan
+        return output_gradient  # diasumsikan output_gradient = y_pred - y_true
+    
+class ReLU(Layer):
     def forward(self, input):
         self.input = input
-        return np.maximum(0, input)
+        return tf.nn.relu(input)
 
     def backward(self, output_gradient, learning_rate):
-        return output_gradient * (self.input > 0)
+        relu_grad = tf.cast(self.input > 0, tf.float32)
+        return output_gradient * relu_grad
