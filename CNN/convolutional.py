@@ -2,70 +2,84 @@ import tensorflow as tf
 from layer import Layer
 
 class Convolutional(Layer):
-    def __init__(self, input_shape, kernel_size, depth):
-        self.input_depth, self.input_height, self.input_width = input_shape
-        self.kernel_size = kernel_size
-        self.depth = depth
+    def __init__(self, filters, kernel_size, activation=None, input_shape=None, kernels=None, biases=None):
+        self.type = "convolution"
+        self.filters = filters
+        # kernel_size bisa tuple (kh, kw) atau int
+        if isinstance(kernel_size, int):
+            self.kernel_size = (kernel_size, kernel_size)
+        else:
+            self.kernel_size = kernel_size
+        
+        self.activation = activation
 
-        # weights: (depth, input_depth, kernel_size, kernel_size)
-        limit = tf.sqrt(6.0 / (self.input_depth * kernel_size * kernel_size + depth))
-        self.kernels = tf.Variable(tf.random.uniform(
-            shape=(depth, self.input_depth, kernel_size, kernel_size), minval=-limit, maxval=limit
-        ), trainable=True)
-        self.biases = tf.Variable(tf.zeros((depth,)), trainable=True)
+        self.kernels = None
+        self.biases = None
+
+        if input_shape is not None:
+            # input_shape NHWC: (height, width, channels)
+            self.input_height, self.input_width, self.input_depth = input_shape
+        else:
+            self.input_depth = None  # Akan diinisialisasi saat forward
+
+        # Jika bobot diberikan langsung saat konstruktor
+        if kernels is not None and biases is not None:
+            self.kernels = tf.Variable(kernels, trainable=True)
+            self.biases = tf.Variable(biases, trainable=True)
 
     def forward(self, input):
-        # Input shape: (input_depth, height, width)
+        # input shape: (batch_size, height, width, channels)
+        # print("Input shape:", input.shape)
         self.input = input
-        input_depth, input_height, input_width = input.shape
+        batch_size, input_height, input_width, input_depth = input.shape
 
-        output_height = input_height - self.kernel_size + 1
-        output_width = input_width - self.kernel_size + 1
+        # Initialize kernels dan biases jika belum ada
+        if self.kernels is None:
+            limit = tf.sqrt(6.0 / (input_depth * self.kernel_size[0] * self.kernel_size[1] + self.filters))
+            # kernel shape: (kh, kw, input_depth, filters)
+            self.kernels = tf.Variable(tf.random.uniform(
+                shape=(self.kernel_size[0], self.kernel_size[1], input_depth, self.filters),
+                minval=-limit, maxval=limit
+            ), trainable=True)
+            self.biases = tf.Variable(tf.zeros((self.filters,)), trainable=True)
 
-        output = tf.TensorArray(dtype=tf.float32, size=self.depth)
+        kh, kw = self.kernel_size
+        output_height = input_height - kh + 1
+        output_width = input_width - kw + 1
+        # print("Output shape (H, W):", output_height, output_width)
 
-        for d in tf.range(self.depth):
-            feature_map = tf.zeros((output_height, output_width), dtype=tf.float32)
-            for c in tf.range(self.input_depth):
-                kernel = self.kernels[d, c]
-                channel = input[c]
+        # Tempat simpan hasil konvolusi tiap batch
+        batch_outputs = tf.TensorArray(dtype=tf.float32, size=batch_size)
 
-                # lakukan konvolusi manual
-                conv = []
+        for b in tf.range(batch_size):
+            input_sample = input[b]  # shape: (input_height, input_width, input_depth)
+            feature_maps = tf.TensorArray(dtype=tf.float32, size=self.filters)
+
+            for f in tf.range(self.filters):
+                # buat feature map untuk filter f
+                feature_map = tf.zeros((output_height, output_width), dtype=tf.float32)
+
                 for i in range(output_height):
-                    row = []
                     for j in range(output_width):
-                        patch = channel[i:i+self.kernel_size, j:j+self.kernel_size]
-                        row.append(tf.reduce_sum(patch * kernel))
-                    conv.append(tf.stack(row))
-                conv = tf.stack(conv)
-                feature_map += conv
-            feature_map += self.biases[d]
-            output = output.write(d, feature_map)
+                        # ambil patch (kh, kw, c)
+                        patch = input_sample[i:i+kh, j:j+kw, :]  # shape: (kh, kw, input_depth)
+                        kernel = self.kernels[:, :, :, f]        # shape: (kh, kw, input_depth)
+                        conv_value = tf.reduce_sum(patch * kernel)
+                        feature_map = tf.tensor_scatter_nd_update(feature_map, [[i, j]], [conv_value])
 
-        self.output = tf.transpose(output.stack(), perm=[0, 1, 2])  # (depth, h, w)
+                # tambahkan bias
+                feature_map += self.biases[f]
+                feature_maps = feature_maps.write(f, feature_map)
+
+            sample_output = feature_maps.stack()  # shape: (filters, output_height, output_width)
+            # transpose ke NHW format jadi H,W,C supaya konsisten (opsional)
+            sample_output = tf.transpose(sample_output, perm=[1, 2, 0])  # (H, W, filters)
+
+            if self.activation is not None:
+                sample_output = self.activation(sample_output)
+
+            batch_outputs = batch_outputs.write(b, sample_output)
+
+        self.output = batch_outputs.stack()  # shape: (batch_size, H, W, filters)
+        print("Output shape after conv:", self.output.shape)
         return self.output
-
-    def backward(self, output_gradient, learning_rate):
-        # output_gradient: (depth, out_h, out_w)
-        input_gradient = tf.zeros_like(self.input)
-        kernel_gradient = tf.zeros_like(self.kernels)
-        bias_gradient = tf.reduce_sum(output_gradient, axis=[1, 2])  # sum over height & width
-
-        for d in range(self.depth):
-            for c in range(self.input_depth):
-                for i in range(self.input_height - self.kernel_size + 1):
-                    for j in range(self.input_width - self.kernel_size + 1):
-                        patch = self.input[c, i:i+self.kernel_size, j:j+self.kernel_size]
-                        kernel_gradient = kernel_gradient.numpy()
-                        kernel_gradient[d, c] += output_gradient[d, i, j] * patch.numpy()
-                        kernel_gradient = tf.convert_to_tensor(kernel_gradient)
-
-                        input_gradient = input_gradient.numpy()
-                        input_gradient[c, i:i+self.kernel_size, j:j+self.kernel_size] += output_gradient[d, i, j].numpy() * self.kernels[d, c].numpy()
-                        input_gradient = tf.convert_to_tensor(input_gradient)
-
-        self.kernels.assign_sub(learning_rate * kernel_gradient)
-        self.biases.assign_sub(learning_rate * bias_gradient)
-
-        return input_gradient
