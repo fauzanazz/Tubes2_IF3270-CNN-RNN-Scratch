@@ -118,49 +118,78 @@ def evaluate_model(model: tf.keras.Model,
     }
 
 
-def plot_training_history(history: tf.keras.callbacks.History, 
-                         experiment_name: str,
-                         save_path: str = None):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-    # Plot loss
-    ax1.plot(history.history['loss'], label='Training Loss')
-    ax1.plot(history.history['val_loss'], label='Validation Loss')
-    ax1.set_title(f'{experiment_name} - Loss')
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Loss')
-    ax1.legend()
-    ax1.grid(True)
+def plot_loss_curves(*histories, 
+                     labels=None,
+                     save_path: str = None):
+    if len(histories) == 1 and isinstance(histories[0], list):
+        histories = histories[0]
+    else:
+        # Convert tuple to list
+        histories = list(histories)
     
-    # Plot accuracy
-    ax2.plot(history.history['accuracy'], label='Training Accuracy')
-    ax2.plot(history.history['val_accuracy'], label='Validation Accuracy')
-    ax2.set_title(f'{experiment_name} - Accuracy')
-    ax2.set_xlabel('Epoch')
-    ax2.set_ylabel('Accuracy')
-    ax2.legend()
-    ax2.grid(True)
+    # Handle labels
+    if labels is None:
+        if len(histories) == 1:
+            labels = ["Model"]
+        else:
+            labels = [f"Model {i+1}" for i in range(len(histories))]
+    elif not isinstance(labels, list):
+        labels = [labels]
     
+    while len(labels) < len(histories):
+        labels.append(f"Model {len(labels)+1}")
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+    line_styles = ['-', '--', '-.', ':']
+    markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
+    
+    max_epochs = 0
+    
+    for i, (history, label) in enumerate(zip(histories, labels)):
+        epochs = range(1, len(history.history['loss']) + 1)
+        max_epochs = max(max_epochs, len(epochs))
+        
+        color = colors[i % len(colors)]
+        line_style = line_styles[i % len(line_styles)]
+        marker = markers[i % len(markers)]
+        
+        ax1.plot(epochs, history.history['loss'], 
+                color=color, linestyle=line_style, marker=marker,
+                label=f'{label}', linewidth=2, markersize=4, alpha=0.8)
+        
+        ax2.plot(epochs, history.history['val_loss'], 
+                color=color, linestyle=line_style, marker=marker,
+                label=f'{label}', linewidth=2, markersize=4, alpha=0.8)
+    
+    ax1.set_title('Training Loss', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Epoch', fontsize=12)
+    ax1.set_ylabel('Loss', fontsize=12)
+    ax1.legend(fontsize=10, loc='best')
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(1, max_epochs)
+    
+    ax2.set_title('Validation Loss', fontsize=14, fontweight='bold')
+    ax2.set_xlabel('Epoch', fontsize=12)
+    ax2.set_ylabel('Loss', fontsize=12)
+    ax2.legend(fontsize=10, loc='best')
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(1, max_epochs)
+    
+    fig.suptitle('Training and Validation Loss Comparison', fontsize=16, fontweight='bold')
     plt.tight_layout()
     
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Loss comparison plot saved to: {save_path}")
     
     plt.show()
-
 
 def plot_comparison_results(results: Dict[str, Dict[str, float]], 
                           metric: str = 'f1_macro',
                           title: str = "Model Comparison",
                           save_path: str = None):
-    """
-    Plot comparison of different experiments.
-    
-    Args:
-        results: Dictionary of experiment results
-        metric: Metric to plot
-        title: Plot title
-        save_path: Path to save the plot
-    """
     experiments = list(results.keys())
     values = [results[exp][metric] for exp in experiments]
     

@@ -18,7 +18,7 @@ from Utils import (
     create_text_vectorizer, 
     build_lstm_model, 
     evaluate_model,
-    plot_training_history,
+    plot_loss_curves,
     save_experiment_results
 )
 from Layer.scratch_layers import LSTMModel
@@ -85,6 +85,13 @@ def main():
         validation_data=val_ds_vectorized,
         epochs=config['epochs'],
         verbose=1
+    )
+    
+    # Plot training and validation loss curves
+    print("Generating loss curves plot...")
+    plot_loss_curves(
+        history,
+        save_path="artifacts/loss_curves.png"
     )
     
     print("Setting up custom LSTM model")
@@ -198,11 +205,6 @@ def main():
     
     print("Saving results...")
     os.makedirs("artifacts", exist_ok=True)
-    plot_training_history(
-        history=history,
-        experiment_name="Keras LSTM Training",
-        save_path="artifacts/training_history.png"
-    )
 
     def convert_numpy_to_list(obj):
         if isinstance(obj, np.ndarray):
