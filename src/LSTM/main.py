@@ -200,8 +200,8 @@ def main():
     os.makedirs("artifacts", exist_ok=True)
     plot_training_history(
         history=history,
-        experiment_name="Keras LSTM Training (Fixed)",
-        save_path="artifacts/training_history_fixed.png"
+        experiment_name="Keras LSTM Training",
+        save_path="artifacts/training_history.png"
     )
 
     def convert_numpy_to_list(obj):
@@ -238,17 +238,17 @@ def main():
     
     save_experiment_results(
         results=experiment_results,
-        experiment_name="lstm_comparison_fixed",
+        experiment_name="lstm_comparison",
         save_dir="artifacts"
     )
     
     try:
-        keras_model.save("artifacts/keras_lstm_model_fixed.keras")
+        keras_model.save("artifacts/keras_lstm_model.keras")
         print("Keras model saved successfully")
     except Exception as e:
         print(f"Warning: Could not save Keras model: {e}")
         try:
-            keras_model.save("artifacts/keras_lstm_model_fixed.h5")
+            keras_model.save("artifacts/keras_lstm_model.h5")
             print("Keras model saved in legacy format")
         except Exception as e2:
             print(f"Error: Could not save model in any format: {e2}")
