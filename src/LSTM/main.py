@@ -21,7 +21,7 @@ from Utils import (
     plot_loss_curves,
     save_experiment_results
 )
-from Layer.scratch_layers import LSTMModel
+from LSTMModel import LSTMModel
 import tensorflow as tf
 
 def main():
