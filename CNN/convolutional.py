@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 from layer import Layer
 
 class Convolutional(Layer):
@@ -24,85 +24,65 @@ class Convolutional(Layer):
 
         # Jika bobot diberikan langsung saat konstruktor
         if kernels is not None and biases is not None:
-            self.kernels = tf.Variable(kernels, trainable=True)
-            self.biases = tf.Variable(biases, trainable=True)
-
-    # def forward(self, input):
-    #     # input shape: (batch_size, height, width, channels)
-    #     # print("Input shape:", input.shape)
-    #     self.input = input
-    #     batch_size, input_height, input_width, input_depth = input.shape
-
-    #     # Initialize kernels dan biases jika belum ada
-    #     if self.kernels is None:
-    #         limit = tf.sqrt(6.0 / (input_depth * self.kernel_size[0] * self.kernel_size[1] + self.filters))
-    #         # kernel shape: (kh, kw, input_depth, filters)
-    #         self.kernels = tf.Variable(tf.random.uniform(
-    #             shape=(self.kernel_size[0], self.kernel_size[1], input_depth, self.filters),
-    #             minval=-limit, maxval=limit
-    #         ), trainable=True)
-    #         self.biases = tf.Variable(tf.zeros((self.filters,)), trainable=True)
-
-    #     kh, kw = self.kernel_size
-    #     output_height = input_height - kh + 1
-    #     output_width = input_width - kw + 1
-    #     # print("Output shape (H, W):", output_height, output_width)
-
-    #     # Tempat simpan hasil konvolusi tiap batch
-    #     batch_outputs = tf.TensorArray(dtype=tf.float32, size=batch_size)
-
-    #     for b in tf.range(batch_size):
-    #         input_sample = input[b]  # shape: (input_height, input_width, input_depth)
-    #         feature_maps = tf.TensorArray(dtype=tf.float32, size=self.filters)
-
-    #         for f in tf.range(self.filters):
-    #             # buat feature map untuk filter f
-    #             feature_map = tf.zeros((output_height, output_width), dtype=tf.float32)
-
-    #             for i in range(output_height):
-    #                 for j in range(output_width):
-    #                     # ambil patch (kh, kw, c)
-    #                     patch = input_sample[i:i+kh, j:j+kw, :]  # shape: (kh, kw, input_depth)
-    #                     kernel = self.kernels[:, :, :, f]        # shape: (kh, kw, input_depth)
-    #                     conv_value = tf.reduce_sum(patch * kernel)
-    #                     feature_map = tf.tensor_scatter_nd_update(feature_map, [[i, j]], [conv_value])
-
-    #             # tambahkan bias
-    #             feature_map += self.biases[f]
-    #             feature_maps = feature_maps.write(f, feature_map)
-
-    #         sample_output = feature_maps.stack()  # shape: (filters, output_height, output_width)
-    #         # transpose ke NHW format jadi H,W,C supaya konsisten (opsional)
-    #         sample_output = tf.transpose(sample_output, perm=[1, 2, 0])  # (H, W, filters)
-
-    #         if self.activation is not None:
-    #             sample_output = self.activation(sample_output)
-
-    #         batch_outputs = batch_outputs.write(b, sample_output)
-
-    #     self.output = batch_outputs.stack()  # shape: (batch_size, H, W, filters)
-    #     print("Output shape after conv:", self.output.shape)
-    #     return self.output
+            self.kernels = np.array(kernels, dtype=np.float32)
+            self.biases = np.array(biases, dtype=np.float32)
 
     def forward(self, input):
+        # input shape: (batch_size, height, width, channels)
         self.input = input
-        batch_size, input_height, input_width, input_depth = input.shape
+        batch_size, input_height, input_width, input_depth_from_input = input.shape
 
+        # Initialize kernels dan biases jika belum ada
         if self.kernels is None:
-            limit = tf.sqrt(6.0 / (input_depth * self.kernel_size[0] * self.kernel_size[1] + self.filters))
-            self.kernels = tf.Variable(tf.random.uniform(
-                shape=(self.kernel_size[0], self.kernel_size[1], input_depth, self.filters),
-                minval=-limit, maxval=limit
-            ), trainable=True)
-            self.biases = tf.Variable(tf.zeros((self.filters,)), trainable=True)
+            # Gunakan input_depth yang ditentukan saat init atau dari input pertama
+            current_input_depth = self.input_depth if self.input_depth is not None else input_depth_from_input
+            if current_input_depth is None: # Jika self.input_depth juga None
+                raise ValueError("Input depth tidak diketahui untuk inisialisasi kernel.")
+            self.input_depth = current_input_depth # Pastikan self.input_depth di-set
 
-        conv_output = tf.nn.conv2d(input, self.kernels, strides=[1, 1, 1, 1], padding='VALID')
-        conv_output = tf.nn.bias_add(conv_output, self.biases)
+            limit_denominator = float(self.input_depth * self.kernel_size[0] * self.kernel_size[1] + self.filters)
+            limit = np.sqrt(6.0 / limit_denominator)
+            # kernel shape: (kh, kw, input_depth, filters)
+            self.kernels = np.random.uniform(
+                low=-limit, high=limit,
+                size=(self.kernel_size[0], self.kernel_size[1], self.input_depth, self.filters)
+            ).astype(np.float32)
+            self.biases = np.zeros((self.filters,), dtype=np.float32)
 
-        if self.activation is not None:
-            conv_output = self.activation(conv_output)
+        kh, kw = self.kernel_size
+        output_height = input_height - kh + 1
+        output_width = input_width - kw + 1
 
-        self.output = conv_output
-        # print("Output shape after conv:", self.output.shape)
+        # Tempat simpan hasil konvolusi tiap batch
+        # Inisialisasi output array dengan bentuk yang benar
+        self.output = np.zeros((batch_size, output_height, output_width, self.filters), dtype=np.float32)
+
+        for b in range(batch_size):
+            input_sample = input[b]  # shape: (input_height, input_width, input_depth)
+            # feature_maps_for_sample = np.zeros((output_height, output_width, self.filters), dtype=np.float32)
+
+            for f in range(self.filters):
+                # buat feature map untuk filter f
+                feature_map_f = np.zeros((output_height, output_width), dtype=np.float32)
+                current_kernel = self.kernels[:, :, :, f]
+
+                for i in range(output_height):
+                    for j in range(output_width):
+                        # ambil patch (kh, kw, c)
+                        patch = input_sample[i:i+kh, j:j+kw, :]  # shape: (kh, kw, input_depth)
+                        conv_value = np.sum(patch * current_kernel)
+                        feature_map_f[i, j] = conv_value
+
+                # tambahkan bias
+                feature_map_f += self.biases[f]
+                self.output[b, :, :, f] = feature_map_f
+
+            # Tidak perlu transpose lagi karena kita mengisi self.output[b, :, :, f]
+            # sample_output = feature_maps_for_sample
+
+            if self.activation is not None:
+                # Terapkan aktivasi ke seluruh output sample saat ini
+                # Pastikan aktivasi diterapkan setelah semua filter untuk batch item tersebut dihitung dan bias ditambahkan
+                self.output[b, :, :, :] = self.activation(self.output[b, :, :, :])
+
         return self.output
-

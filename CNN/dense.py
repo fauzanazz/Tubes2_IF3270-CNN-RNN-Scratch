@@ -1,32 +1,36 @@
-import tensorflow as tf
+import numpy as np
 from layer import Layer
 
 class Dense(Layer):
     def __init__(self, input_size, output_size, activation=None, weights=None, biases=None):
         self.type = "dense"
         if weights is not None:
-            self.weights = tf.Variable(weights, trainable=True)
+            self.weights = np.array(weights, dtype=np.float32)
         else:
             # Xavier initialization
-            limit = tf.sqrt(6.0 / (input_size + output_size))
-            self.weights = tf.Variable(
-                tf.random.uniform((input_size, output_size), -limit, limit), trainable=True
-            )
+            limit = np.sqrt(6.0 / (input_size + output_size))
+            self.weights = np.random.uniform(
+                low=-limit, high=limit,
+                size=(input_size, output_size)
+            ).astype(np.float32)
 
         if biases is not None:
-            self.bias = tf.Variable(biases, trainable=True)
+            self.bias = np.array(biases, dtype=np.float32)
         else:
-            self.bias = tf.Variable(tf.zeros((output_size,)), trainable=True)  # shape: (output_size,)
+            self.bias = np.zeros((output_size,), dtype=np.float32)  # shape: (output_size,)
 
         self.activation = activation
 
     def forward(self, input):
         self.input = input  # shape: (batch_size, input_size)
 
+        # Matriks perkalian: (batch_size, input_size) @ (input_size, output_size) -> (batch_size, output_size)
+        z = np.dot(input, self.weights)
+
         # Tambahkan bias secara broadcast: (batch_size, output_size)
-        output = tf.matmul(input, self.weights) + self.bias
+        output = z + self.bias
 
         if self.activation is not None:
+            # self.activation adalah fungsi yang diterima dari ActivationFunction.py
             output = self.activation(output)
-
         return output

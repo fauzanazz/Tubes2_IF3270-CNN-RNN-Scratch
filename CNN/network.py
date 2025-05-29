@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 
 def predict(network, inputs, batch_size=32):
     outputs = []
@@ -11,6 +11,4 @@ def predict(network, inputs, batch_size=32):
             out = layer.forward(out)
         outputs.append(out)  # out sudah bentuk batch
 
-    return tf.concat(outputs, axis=0)  # gabungkan semua batch
-
-
+    return np.concatenate(outputs, axis=0)  # gabungkan semua batch

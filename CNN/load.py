@@ -1,8 +1,9 @@
-import tensorflow as tf
+import tensorflow as tf # Masih dibutuhkan untuk membaca model Keras
 from convolutional import Convolutional
 from pool import MaxPooling2D,AvgPooling2D
 from flatten import Flatten
 from dense import Dense
+from ActivationFunction import ActivationFunction
 
 
 def newConvLayer(layer):
@@ -10,7 +11,13 @@ def newConvLayer(layer):
 
     config = layer.get_config()
     weights,biases = layer.get_weights()
-    return Convolutional(filters=config['filters'],kernel_size=config['kernel_size'],activation=tf.nn.relu,kernels=weights,biases=biases)
+    activation_func = None
+    if config['activation'] == 'relu':
+        activation_func = ActivationFunction.relu
+    # Tambahkan kondisi lain jika ada aktivasi lain yang didukung di Conv
+    
+    return Convolutional(filters=config['filters'],kernel_size=config['kernel_size'],
+                         activation=activation_func, kernels=weights,biases=biases)
 
 def newMaxPoolLayer(layer):
     print("creating new max pool layer")
@@ -33,12 +40,20 @@ def newDenseLayer(layer):
     print("creating new dense layer")
     config = layer.get_config()
     weights, biases = layer.get_weights()
+    
+    activation_func = None
+    if config['activation'] == 'relu':
+        activation_func = ActivationFunction.relu
+    elif config['activation'] == 'softmax':
+        activation_func = ActivationFunction.softmax
+    # Tambahkan kondisi lain jika ada aktivasi lain yang didukung di Dense
+
     return Dense(
         input_size=weights.shape[0],
         output_size=weights.shape[1],
         weights=weights,
         biases=biases,
-        activation=tf.nn.relu if config['activation'] == 'relu' else tf.nn.softmax
+        activation=activation_func
     )
 
 

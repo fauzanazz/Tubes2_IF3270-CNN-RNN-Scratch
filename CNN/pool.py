@@ -1,82 +1,73 @@
-import tensorflow as tf
+import numpy as np
 from layer import Layer
 
 class MaxPooling2D(Layer):
     def __init__(self, pool_size=(2, 2)):
         self.type = "maxpool"
-        self.pool_size = pool_size
+        # pool_size bisa tuple (ph, pw) atau int
+        if isinstance(pool_size, int):
+            self.pool_size = (pool_size, pool_size)
+        else:
+            self.pool_size = pool_size
 
-    # def forward(self, input):
-    #     # input shape: (batch_size, height, width, channels)
-    #     self.input = input
-    #     batch_size, height, width, channels = input.shape
-    #     ph, pw = self.pool_size
-
-    #     h_out = height // ph
-    #     w_out = width // pw
-
-    #     outputs = []
-
-    #     for b in range(batch_size):
-    #         sample = input[b]  # shape: (height, width, channels)
-    #         pooled = []
-    #         for i in range(h_out):
-    #             row = []
-    #             for j in range(w_out):
-    #                 h_start = i * ph
-    #                 w_start = j * pw
-    #                 patch = sample[h_start:h_start+ph, w_start:w_start+pw, :]  # shape: (ph, pw, channels)
-    #                 max_val = tf.reduce_max(patch, axis=[0, 1])  # shape: (channels,)
-    #                 row.append(max_val)
-    #             pooled.append(tf.stack(row))  # shape: (w_out, channels)
-    #         outputs.append(tf.stack(pooled))  # shape: (h_out, w_out, channels)
-
-    #     output_tensor = tf.stack(outputs)  # shape: (batch_size, h_out, w_out, channels)
-    #     # print("MaxPooling2D Output shape:", output_tensor.shape)
-    #     return output_tensor
-    
-    def forward(self, input):
-        self.input = input
+    def forward(self, input_tensor):
         # input shape: (batch_size, height, width, channels)
-        ksize = [1, self.pool_size[0], self.pool_size[1], 1]  # kernel size (batch, h, w, channels)
-        strides = [1, self.pool_size[0], self.pool_size[1], 1]  # strides sesuai pool_size
-        padding = 'VALID'  # atau 'SAME', sesuai kebutuhan
+        self.input = input_tensor # Simpan input asli jika diperlukan di tempat lain
 
-        output = tf.nn.max_pool2d(input, ksize=ksize, strides=strides, padding=padding)
-        # print("MaxPooling2D Output shape:", output.shape)
-        return output
+        batch_size, height, width, num_channels = input_tensor.shape
+        ph, pw = self.pool_size
+
+        # Hitung dimensi output
+        out_h = height // ph
+        out_w = width // pw
+        
+        # Inisialisasi output array
+        output_array = np.zeros((batch_size, out_h, out_w, num_channels), dtype=input_tensor.dtype)
+
+        for b_idx in range(batch_size):
+            sample = input_tensor[b_idx]  # shape: (height, width, channels)
+            for i_idx in range(out_h):
+                for j_idx in range(out_w):
+                    h_start = i_idx * ph
+                    w_start = j_idx * pw
+                    patch = sample[h_start:h_start+ph, w_start:w_start+pw, :]  # shape: (ph, pw, channels)
+                    # Lakukan max pooling per channel
+                    output_array[b_idx, i_idx, j_idx, :] = np.max(patch, axis=(0, 1))
+
+        return output_array
 
 
 class AvgPooling2D(Layer):
     def __init__(self, pool_size=(2, 2)):
         self.type = "avgpool"
-        self.pool_size = pool_size
+        # pool_size bisa tuple (ph, pw) atau int
+        if isinstance(pool_size, int):
+            self.pool_size = (pool_size, pool_size)
+        else:
+            self.pool_size = pool_size
 
-    def forward(self, input):
+    def forward(self, input_tensor):
         # input shape: (batch_size, height, width, channels)
-        self.input = input
-        batch_size, height, width, channels = input.shape
+        self.input = input_tensor # Simpan input asli jika diperlukan di tempat lain
+
+        batch_size, height, width, num_channels = input_tensor.shape
         ph, pw = self.pool_size
 
-        h_out = height // ph
-        w_out = width // pw
+        # Hitung dimensi output
+        out_h = height // ph
+        out_w = width // pw
+        
+        # Inisialisasi output array
+        output_array = np.zeros((batch_size, out_h, out_w, num_channels), dtype=input_tensor.dtype)
 
-        outputs = []
-
-        for b in range(batch_size):
-            sample = input[b]  # shape: (height, width, channels)
-            pooled = []
-            for i in range(h_out):
-                row = []
-                for j in range(w_out):
-                    h_start = i * ph
-                    w_start = j * pw
+        for b_idx in range(batch_size):
+            sample = input_tensor[b_idx]  # shape: (height, width, channels)
+            for i_idx in range(out_h):
+                for j_idx in range(out_w):
+                    h_start = i_idx * ph
+                    w_start = j_idx * pw
                     patch = sample[h_start:h_start+ph, w_start:w_start+pw, :]  # shape: (ph, pw, channels)
-                    mean_val = tf.reduce_mean(patch, axis=[0, 1])  # shape: (channels,)
-                    row.append(mean_val)
-                pooled.append(tf.stack(row))  # shape: (w_out, channels)
-            outputs.append(tf.stack(pooled))  # shape: (h_out, w_out, channels)
+                    # Lakukan average pooling per channel
+                    output_array[b_idx, i_idx, j_idx, :] = np.mean(patch, axis=(0, 1))
 
-        output_tensor = tf.stack(outputs)  # shape: (batch_size, h_out, w_out, channels)
-        # print("AvgPooling2D Output shape:", output_tensor.shape)
-        return output_tensor
+        return output_array
