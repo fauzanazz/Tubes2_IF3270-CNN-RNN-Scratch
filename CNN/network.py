@@ -4,7 +4,7 @@ def predict(network, inputs, batch_size=32):
     outputs = []
 
     for i in range(0, len(inputs), batch_size):
-        print("mulai prediksi batch ke-",i,"dari",len(inputs))
+        print("mulai prediksi batch ke-",i//batch_size,"dari",len(inputs)//batch_size)
         batch = inputs[i:i+batch_size]
         out = batch
         for layer in network:

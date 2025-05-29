@@ -57,7 +57,8 @@ def newDenseLayer(layer):
     )
 
 
-def load_scratch_model(model: tf.keras.models):
+def load_scratch_model(filepath):
+    model = tf.keras.models.load_model(filepath)
     ScratchModel = []
     for layer in model.layers:
         layerType = layer.name
