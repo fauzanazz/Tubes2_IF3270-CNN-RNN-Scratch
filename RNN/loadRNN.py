@@ -84,7 +84,6 @@ def load_scratch_model(model):
         print(layer_type)
         
         if layer_type == "Embedding":
-            # Wrap the Embedding layer instead of creating a new one
             new_layer = EmbeddingWrapper(layer)
         elif layer_type == "SimpleRNN":
             new_layer = newSimpleRNNLayer(layer)

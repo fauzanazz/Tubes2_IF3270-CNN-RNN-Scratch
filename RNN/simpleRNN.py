@@ -1,53 +1,49 @@
-from layer import Layer
 import numpy as np
 
-class SimpleRNN(Layer):
-    def __init__(self, units, return_sequences=False, kernel=None, recurrent_kernel=None, bias=None):
-        self.type = "rnn"
-        self.units = units
+class SimpleRNN:
+    def __init__(self, kernel, recurrent_kernel, bias, return_sequences=False):
+        self.kernel = kernel  # Input weights
+        self.recurrent_kernel = recurrent_kernel  # Recurrent weights
+        self.bias = bias  # Bias term
+        self.units = bias.shape[0]  # Number of units from bias shape
         self.return_sequences = return_sequences
-        self.kernel = kernel
-        self.recurrent_kernel = recurrent_kernel
-        self.bias = bias
+        self.states = None  # Will store states for each timestep
         
+    def forward(self, inputs):
+        """
+        Forward pass for SimpleRNN
+        Args:
+            inputs: Input array of shape (batch_size, timesteps, input_features)
+        Returns:
+            Array of shape (batch_size, timesteps, units) if return_sequences=True
+            else (batch_size, units)
+        """
+        batch_size = inputs.shape[0]
+        time_steps = inputs.shape[1]
+        
+        # Initialize states
+        h_t = np.zeros((batch_size, self.units))  # Initial hidden state
+        all_states = []
 
-    def forward(self, input):
-        self.input = input
-        batch_size, time_steps, features = input.shape
+        # Process each time step
+        for t in range(time_steps):
+            # Get current input
+            x_t = inputs[:, t, :]
+            
+            # Calculate current state
+            # h_t = tanh(x_t @ W + h_(t-1) @ U + b)
+            h_t = np.tanh(
+                np.dot(x_t, self.kernel) +
+                np.dot(h_t, self.recurrent_kernel) +
+                self.bias
+            )
+            
+            all_states.append(h_t)
         
-        # Initialize output array
+        # Stack all states
+        self.states = np.stack(all_states, axis=1)
+        
+        # Return either all states or just the last state
         if self.return_sequences:
-            output = np.zeros((batch_size, time_steps, self.units))
-        else:
-            output = np.zeros((batch_size, self.units))
-            
-        # Initialize hidden state
-        h_prev = np.zeros((batch_size, self.units))
-        
-        for i in range(time_steps):
-            # Current input at time step i
-            x_t = input[:, i, :]
-            
-            # Calculate weighted input
-            u_xt = np.dot(x_t, self.kernel) if self.kernel is not None else 0
-            w_ht = np.dot(h_prev, self.recurrent_kernel) if self.recurrent_kernel is not None else 0
-            
-            # Output for hidden state
-            ht = np.tanh(u_xt + w_ht + self.bias if self.bias is not None else 0)
-            
-            # Storing output
-            if self.return_sequences:
-                output[:, i, :] = ht
-            
-            # Update state for next time step
-            h_prev = ht            
-            
-        
-        # If not returning sequences, return only the last output
-        if not self.return_sequences:
-            output = h_prev
-            
-        self.output = output
-        
-        return output
-        
+            return self.states
+        return all_states[-1]  # Return only the last state

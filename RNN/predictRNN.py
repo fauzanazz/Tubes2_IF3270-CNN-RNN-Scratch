@@ -7,56 +7,54 @@ class EmbeddingWrapper:
         self.layer = keras_embedding
     
     def forward(self, inputs):
+        # Ensure inputs are int32
+        if isinstance(inputs, np.ndarray):
+            inputs = tf.convert_to_tensor(inputs, dtype=tf.int32)
         return self.layer(inputs).numpy()
 
 def predict(network, inputs, batch_size=32):
     """
     Make predictions with the scratch RNN model.
     """
-    # Get the vectorizer from global scope
+    # Get the vectorizer
     import sys
     module = sys.modules['__main__']
     if hasattr(module, 'vectorizer'):
         vectorizer = module.vectorizer
         print("Using vectorizer from global scope")
     else:
-        raise ValueError("No vectorizer found in global scope. Please ensure vectorizer is available.")
+        raise ValueError("No vectorizer found in global scope")
     
-    # Convert inputs to numpy array if needed
+    # Convert inputs to numpy array
     if hasattr(inputs, 'values'):
         text_inputs = inputs.values
     else:
         text_inputs = np.array(inputs)
     
-    # Process inputs with vectorizer
-    print("Preprocessing text inputs...")
-    outputs = []
-    
     # Process in batches
+    outputs = []
+    n_batches = (len(text_inputs) + batch_size - 1) // batch_size
+    
     for i in range(0, len(text_inputs), batch_size):
+        print(f"Processing batch {i//batch_size + 1}/{n_batches}")
         batch_texts = text_inputs[i:i + batch_size]
-        print(f"Processing batch {i//batch_size + 1}/{(len(text_inputs) + batch_size - 1)//batch_size}")
         
-        # Vectorize the text
-        current_output = vectorizer(batch_texts).numpy()
+        # Vectorize text
+        current_output = vectorizer(batch_texts)
         
         # Pass through each layer
         for j, layer in enumerate(network):
             layer_name = layer.__class__.__name__
-            print(f"Layer {j+1}: {layer_name}")
+            print(f"  Layer {j+1}: {layer_name}")
             
-            if isinstance(layer, tf.keras.layers.Embedding):
-                # Wrap Embedding layer if not already wrapped
-                if not hasattr(layer, 'forward'):
-                    layer = EmbeddingWrapper(layer)
+            if isinstance(layer, EmbeddingWrapper):
                 current_output = layer.forward(current_output)
             else:
-                # For custom layers, use forward method directly
                 current_output = layer.forward(current_output)
         
         outputs.append(current_output)
     
-    # Concatenate all batch outputs
+    # Combine all batches
     final_output = np.vstack(outputs)
     print("Prediction complete")
     return final_output
