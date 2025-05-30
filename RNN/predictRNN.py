@@ -16,6 +16,10 @@ def predict(network, inputs, batch_size=32):
     """
     Make predictions with the scratch RNN model.
     """
+    # Add input validation
+    if not isinstance(inputs, (list, np.ndarray)):
+        raise ValueError("Input texts must be list or numpy array")
+    
     # Get the vectorizer
     import sys
     module = sys.modules['__main__']
@@ -52,7 +56,9 @@ def predict(network, inputs, batch_size=32):
             else:
                 current_output = layer.forward(current_output)
         
-        outputs.append(current_output)
+        # Add normalization for probabilities
+        batch_preds = current_output / np.sum(current_output, axis=1, keepdims=True)
+        outputs.append(batch_preds)
     
     # Combine all batches
     final_output = np.vstack(outputs)

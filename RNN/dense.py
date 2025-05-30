@@ -26,17 +26,26 @@ class Dense(Layer):
         Returns:
         - Output tensor with shape (batch_size, output_features)
         """
-        # Linear transformation: y = x*W + b
+        # Add input normalization
+        inputs = (inputs - np.mean(inputs)) / (np.std(inputs) + 1e-8)
+        
         self.input = inputs
-        linear_output = np.dot(inputs, self.weights) + self.bias
+        MAX_VALUE = 1e9
+        EPSILON = 1e-7
         
-        # Apply activation function
+        # Add numerical stability to dot product
+        linear_output = np.dot(inputs, self.weights)
+        linear_output = np.clip(linear_output + self.bias, -MAX_VALUE, MAX_VALUE)
+        
         if self.activation == "softmax":
-            # Softmax activation for classification
-            # Subtract max for numerical stability
-            exp_vals = np.exp(linear_output - np.max(linear_output, axis=1, keepdims=True))
-            self.output = exp_vals / np.sum(exp_vals, axis=1, keepdims=True)
-        
+            # Match Keras softmax implementation more closely
+            shifted_input = linear_output - np.max(linear_output, axis=1, keepdims=True)
+            exp_vals = np.exp(shifted_input)
+            sum_vals = np.sum(exp_vals, axis=1, keepdims=True)
+            self.output = np.divide(exp_vals, sum_vals + EPSILON, 
+                                out=np.zeros_like(exp_vals), 
+                                where=sum_vals != 0)
+            
         elif self.activation == "relu":
             # ReLU activation
             self.output = np.maximum(0, linear_output)

@@ -14,20 +14,31 @@ class Bidirectional:
         Returns:
             Concatenated output from forward and backward layers
         """
+        # Add input normalization
+        inputs = (inputs - np.mean(inputs)) / (np.std(inputs) + 1e-8)
+        
         self.input = inputs
         
-        # Forward direction
         forward_output = self.forward_layer.forward(inputs)
         
-        # Backward direction - reverse the time dimension (axis=1)
+        # Ensure proper copy of reversed input
         reversed_input = np.flip(inputs, axis=1).copy()
         backward_output = self.backward_layer.forward(reversed_input)
         
-        # If we're returning sequences, we need to flip the backward output back
+        # Add numerical stability check
+        if np.any(np.isnan(forward_output)) or np.any(np.isnan(backward_output)):
+            raise ValueError("NaN values detected in Bidirectional output")
+
+        # Ensure consistent scaling between forward and backward passes
+        forward_output = forward_output / 2.0
+        backward_output = backward_output / 2.0
+        
         if getattr(self.forward_layer, 'return_sequences', False):
             backward_output = np.flip(backward_output, axis=1)
-            # Concatenate along feature dimension
-            return np.concatenate([forward_output, backward_output], axis=-1)
+            # Add normalization before concatenation
+            concat_output = np.concatenate([forward_output, backward_output], axis=-1)
+            return (concat_output - np.mean(concat_output)) / (np.std(concat_output) + 1e-8)
         else:
-            # For single output, just concatenate the final states
-            return np.concatenate([forward_output, backward_output], axis=-1)
+            # For single output, concatenate and normalize final states
+            concat_output = np.concatenate([forward_output, backward_output], axis=-1)
+            return (concat_output - np.mean(concat_output)) / (np.std(concat_output) + 1e-8)
