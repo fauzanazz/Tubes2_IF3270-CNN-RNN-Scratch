@@ -1,9 +1,9 @@
-import tensorflow as tf # Masih dibutuhkan untuk membaca model Keras
-from convolutional import Convolutional
-from pool import MaxPooling2D,AvgPooling2D
-from flatten import Flatten
-from dense import Dense
-from ActivationFunction import ActivationFunction
+import tensorflow as tf
+from .convolutional import Convolutional
+from .pool import MaxPooling2D,AvgPooling2D
+from .flatten import Flatten
+from .dense import Dense
+from .ActivationFunction import ActivationFunction
 
 
 def newConvLayer(layer):
@@ -14,7 +14,6 @@ def newConvLayer(layer):
     activation_func = None
     if config['activation'] == 'relu':
         activation_func = ActivationFunction.relu
-    # Tambahkan kondisi lain jika ada aktivasi lain yang didukung di Conv
     
     return Convolutional(filters=config['filters'],kernel_size=config['kernel_size'],
                          activation=activation_func, kernels=weights,biases=biases)
@@ -46,7 +45,6 @@ def newDenseLayer(layer):
         activation_func = ActivationFunction.relu
     elif config['activation'] == 'softmax':
         activation_func = ActivationFunction.softmax
-    # Tambahkan kondisi lain jika ada aktivasi lain yang didukung di Dense
 
     return Dense(
         input_size=weights.shape[0],
@@ -67,7 +65,7 @@ def load_scratch_model(filepath):
             newLayer = newConvLayer(layer)
         elif "max_pooling2d" in layerType:
             newLayer = newMaxPoolLayer(layer)
-        elif "avg_pooling2d" in layerType:
+        elif "average_pooling2d" in layerType:
             newLayer = newAvgPoolLayer(layer)
         elif "flatten" in layerType:
             newLayer = newFlattenLayer(layer)

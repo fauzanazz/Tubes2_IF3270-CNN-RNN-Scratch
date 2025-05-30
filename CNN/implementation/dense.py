@@ -1,5 +1,5 @@
 import numpy as np
-from layer import Layer
+from .layer import Layer
 
 class Dense(Layer):
     def __init__(self, input_size, output_size, activation=None, weights=None, biases=None):
@@ -7,7 +7,7 @@ class Dense(Layer):
         if weights is not None:
             self.weights = np.array(weights, dtype=np.float32)
         else:
-            # Xavier initialization
+            # xavier init
             limit = np.sqrt(6.0 / (input_size + output_size))
             self.weights = np.random.uniform(
                 low=-limit, high=limit,
@@ -24,13 +24,10 @@ class Dense(Layer):
     def forward(self, input):
         self.input = input  # shape: (batch_size, input_size)
 
-        # Matriks perkalian: (batch_size, input_size) @ (input_size, output_size) -> (batch_size, output_size)
         z = np.dot(input, self.weights)
 
-        # Tambahkan bias secara broadcast: (batch_size, output_size)
         output = z + self.bias
 
         if self.activation is not None:
-            # self.activation adalah fungsi yang diterima dari ActivationFunction.py
             output = self.activation(output)
         return output

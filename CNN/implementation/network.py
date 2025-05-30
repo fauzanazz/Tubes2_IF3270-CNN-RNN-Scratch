@@ -8,7 +8,9 @@ def predict(network, inputs, batch_size=32):
         batch = inputs[i:i+batch_size]
         out = batch
         for layer in network:
+            # print(f"output size = {out.shape}")
             out = layer.forward(out)
+
         outputs.append(out)  # out sudah bentuk batch
 
     return np.concatenate(outputs, axis=0)  # gabungkan semua batch
