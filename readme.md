@@ -72,7 +72,10 @@ Program akan menghasilkan:
 - ✅ **Keras Compatibility**: Load weights dari pre-trained Keras model
 
 ### CNN Implementation
-- 
+- ✅ **Forward Propagation**: Convolution Layer (with relu), Pooling Layer, Flatten Layer, Dense Layer
+- ✅ **Pooling Layer**: MaxPooling dan AveragePooling
+- ✅ **Activation Function**: Relu, Softmax (hanya dense layer)
+- ✅ **Keras Compatibility**: Load weights dari pre-trained Keras model
 
 ### RNN Implementation
 - 
@@ -86,9 +89,11 @@ Program akan menghasilkan:
 - Integration dengan embedding dan dense layers
 - Testing dan validasi terhadap Keras implementation
 
-### Anggota 2: [Nama] - NIM  
+### Anggota 2: [Pradipta Rafa Mahesa] - 13522162  
 **Tanggung Jawab: CNN Implementation**
-- 
+- Implementasi Convolution,MaxPool2D,AvgPool2D,Flatten, dan Dense Layer
+- Forward propagation model CNN
+- Testing dan validasi terhadap Keras implementation
 
 ### Anggota 3: [Nama] - NIM
 **Tanggung Jawab: RNN Implementation**
