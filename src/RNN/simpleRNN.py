@@ -4,10 +4,10 @@ class SimpleRNN:
     def __init__(self, kernel, recurrent_kernel, bias, return_sequences=False):
         self.kernel = kernel  # Input weights
         self.recurrent_kernel = recurrent_kernel  # Recurrent weights
-        self.bias = bias  # Bias term
+        self.bias = bias  # Bias
         self.units = bias.shape[0]  # Number of units from bias shape
         self.return_sequences = return_sequences
-        self.states = None  # Will store states for each timestep
+        self.states = None  # Store states for each timestep
         
     def forward(self, inputs):
         """
