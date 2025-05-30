@@ -98,7 +98,7 @@ Program akan menghasilkan:
 ### Anggota 3: [Auralea Alvinia Syaikha] - 13522148
 **Tanggung Jawab: RNN Implementation**
 - Implementasi simple RNN
-- Forward propagation untuk bidirectional LSTM
+- Forward propagation untuk bidirectional RNN
 - Integration dengan Embedding dan Dense layers
 - Testing dan validasi terhadap Keras implementation
 
