@@ -58,7 +58,6 @@ def main():
     vocab_size = vectorizer.vocabulary_size()
     print(f"Vectorizer created with vocabulary size: {vocab_size}")
     
-    print("Building and training Keras LSTM model...")
     keras_model = build_lstm_model(
         vectorizer=vectorizer,
         embedding_dim=config['embedding_dim'],
@@ -69,15 +68,11 @@ def main():
     )
     
     print(f"Keras model built with {keras_model.count_params():,} parameters")
-    
     def vectorize_text(text, label):
         return vectorizer(text), label
-    
     train_ds_vectorized = train_ds.map(vectorize_text)
     val_ds_vectorized = val_ds.map(vectorize_text)
     test_ds_vectorized = test_ds.map(vectorize_text)
-    
-    print("Datasets vectorized successfully")
     
     print("Training Keras LSTM")
     history = keras_model.fit(
@@ -87,8 +82,6 @@ def main():
         verbose=1
     )
     
-    # Plot training and validation loss curves
-    print("Generating loss curves plot...")
     plot_loss_curves(
         history,
         save_path="artifacts/loss_curves.png"
@@ -103,10 +96,8 @@ def main():
         num_classes=config['num_classes'],
     )
     
-    print("Transferring weights from Keras to custom model")
     custom_model.set_weights_from_keras(keras_model)
     
-    print("Collecting full test dataset for verification")
     all_test_inputs = []
     all_test_labels = []
     
@@ -118,9 +109,7 @@ def main():
     full_test_inputs = np.concatenate(all_test_inputs, axis=0)
     full_test_labels = np.concatenate(all_test_labels, axis=0)
     
-    print(f"Full test dataset shape: {full_test_inputs.shape}")
     
-    print("Generating predictions on full test set...")
     keras_full_pred = keras_model.predict(full_test_inputs, verbose=0)
     custom_full_pred = custom_model.forward(full_test_inputs)
     
@@ -128,15 +117,15 @@ def main():
     mean_diff = np.mean(np.abs(keras_full_pred - custom_full_pred))
     std_diff = np.std(np.abs(keras_full_pred - custom_full_pred))
     
-    print(f"Full dataset verification - Max difference: {max_diff:.8f}")
-    print(f"Full dataset verification - Mean difference: {mean_diff:.8f}")
-    print(f"Full dataset verification - Std difference: {std_diff:.8f}")
+    print(f"Dataset verification - Max difference: {max_diff:.8f}")
+    print(f"Dataset verification - Mean difference: {mean_diff:.8f}")
+    print(f"Dataset verification - Std difference: {std_diff:.8f}")
     
     keras_full_pred_classes = np.argmax(keras_full_pred, axis=1)
     custom_full_pred_classes = np.argmax(custom_full_pred, axis=1)
     full_prediction_agreement = np.mean(keras_full_pred_classes == custom_full_pred_classes)
     
-    print(f"Full dataset prediction agreement: {full_prediction_agreement:.4f}")
+    print(f"Dataset prediction agreement: {full_prediction_agreement:.4f}")
     
     for class_id in range(config['num_classes']):
         class_mask = full_test_labels == class_id
@@ -145,16 +134,13 @@ def main():
             class_agreement = np.mean(keras_full_pred_classes[class_mask] == custom_full_pred_classes[class_mask])
             print(f"Class {class_id} - Mean diff: {class_diff:.6f}, Agreement: {class_agreement:.4f}")
     
-    print("Evaluating models on full test set...")
     
-    print("Evaluating Keras model...")
     keras_results = evaluate_model(
         model=keras_model,
         test_dataset=test_ds_vectorized,
         vectorizer=None
     )
     
-    print("Evaluating custom model...")
     custom_predicted_labels = custom_full_pred_classes
     custom_accuracy = accuracy_score(full_test_labels, custom_predicted_labels)
     custom_f1_macro = f1_score(full_test_labels, custom_predicted_labels, average='macro')
@@ -165,11 +151,6 @@ def main():
         'predictions': custom_predicted_labels,
         'true_labels': full_test_labels
     }
-    
-    print("")
-    print("="*60)
-    print("RESULTS COMPARISON")
-    print("="*60)
     
     print(f"Keras LSTM Results:")
     print(f"  Accuracy:    {keras_results['accuracy']:.4f}")
@@ -192,8 +173,7 @@ def main():
         print("Some differences detected between implementations")
         
         if acc_diff > 0.05 or f1_diff > 0.05:
-            print("DETAILED DIFFERENCE ANALYSIS:")
-            
+            print("Detailed difference analysis:")
             keras_pred_dist = np.bincount(keras_results['predictions'], minlength=3) / len(keras_results['predictions'])
             custom_pred_dist = np.bincount(custom_predicted_labels, minlength=3) / len(custom_predicted_labels)
             
@@ -203,7 +183,7 @@ def main():
             prediction_agreement = np.mean(keras_results['predictions'] == custom_predicted_labels)
             print(f"Individual prediction agreement: {prediction_agreement:.4f}")
     
-    print("Saving results...")
+    print("Saving results")
     os.makedirs("artifacts", exist_ok=True)
 
     def convert_numpy_to_list(obj):

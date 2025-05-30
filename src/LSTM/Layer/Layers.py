@@ -233,7 +233,6 @@ class LSTMLayer:
         input_sequences = input_sequences.astype(np.float32)
         batch_size, timesteps, _ = input_sequences.shape
         
-        # Initialize hidden and cell states
         if initial_state is not None:
             h_prev = initial_state[0].astype(np.float32)
             C_prev = initial_state[1].astype(np.float32)
@@ -244,21 +243,17 @@ class LSTMLayer:
         if self.return_sequences:
             outputs = np.zeros((batch_size, timesteps, self.lstm_units), dtype=np.float32)
         
-        # Process sequences backwards if go_backwards is True
         time_steps = range(timesteps-1, -1, -1) if self.go_backwards else range(timesteps)
         
         for t in time_steps:
             x_t = input_sequences[:, t, :]
             
-            # Apply mask if provided
             if mask is not None:
                 mask_t = mask[:, t:t+1].astype(np.float32)
                 x_t = x_t * mask_t
             
-            # Calculate combined gate inputs (more efficient)
             combined_input = np.dot(x_t, weights_W) + np.dot(h_prev, weights_U) + biases_b
             
-            # Split the combined input for each gate/cell
             z_i = combined_input[:, :self.lstm_units]
             z_f = combined_input[:, self.lstm_units:2*self.lstm_units]
             z_c = combined_input[:, 2*self.lstm_units:3*self.lstm_units]
@@ -269,18 +264,14 @@ class LSTMLayer:
             f_t = self.recurrent_activation(z_f)  # Forget gate
             o_t = self.recurrent_activation(z_o)  # Output gate
             
-            # Calculate candidate cell state
             C_tilde_t = self.activation(z_c)
             
-            # Update cell state
             C_t = f_t * C_prev + i_t * C_tilde_t
             C_t = self._clip_value(C_t, self.cell_clip)
             
-            # Update hidden state
             h_t = o_t * self.activation(C_t)
             h_t = self._clip_value(h_t, self.recurrent_clip)
             
-            # Apply mask to states if provided
             if mask is not None:
                 mask_t = mask[:, t:t+1].astype(np.float32)
                 h_t = h_t * mask_t + h_prev * (1 - mask_t)
