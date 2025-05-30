@@ -27,7 +27,7 @@ class Dense(Layer):
         - Output tensor with shape (batch_size, output_features)
         """
         # Add input normalization
-        inputs = (inputs - np.mean(inputs)) / (np.std(inputs) + 1e-8)
+        # inputs = (inputs - np.mean(inputs)) / (np.std(inputs) + 1e-8)
         
         self.input = inputs
         MAX_VALUE = 1e9

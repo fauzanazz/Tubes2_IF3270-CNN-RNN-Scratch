@@ -6,11 +6,36 @@ class EmbeddingWrapper:
     def __init__(self, keras_embedding):
         self.layer = keras_embedding
     
-    def forward(self, inputs):
+    def forward(self, inputs, training=False):
         # Ensure inputs are int32
         if isinstance(inputs, np.ndarray):
             inputs = tf.convert_to_tensor(inputs, dtype=tf.int32)
-        return self.layer(inputs).numpy()
+        
+        # Get embeddings
+        outputs = self.layer(inputs)
+        
+        # Convert to numpy and maintain consistency with other layers
+        return outputs.numpy()
+
+class DropoutWrapper:
+    """Wrapper for Keras Dropout layer to provide forward() interface"""
+    def __init__(self, keras_dropout):
+        self.layer = keras_dropout
+        self.rate = keras_dropout.rate
+    
+    def forward(self, inputs, training=False):
+        # During inference (training=False), dropout does nothing
+        if not training:
+            return inputs
+        
+        if isinstance(inputs, np.ndarray):
+            inputs = tf.convert_to_tensor(inputs)
+        
+        # Apply dropout
+        outputs = self.layer(inputs, training=training)
+        
+        # Convert back to numpy
+        return outputs.numpy()
 
 def predict(network, inputs, batch_size=32):
     """
@@ -56,9 +81,8 @@ def predict(network, inputs, batch_size=32):
             else:
                 current_output = layer.forward(current_output)
         
-        # Add normalization for probabilities
-        batch_preds = current_output / np.sum(current_output, axis=1, keepdims=True)
-        outputs.append(batch_preds)
+  
+        outputs.append(current_output)
     
     # Combine all batches
     final_output = np.vstack(outputs)

@@ -5,6 +5,7 @@ from bidirectional import Bidirectional
 from dense import Dense
 from dropout import Dropout
 from tensorflow.python.keras.layers.embeddings import Embedding as KerasEmbedding
+from predictRNN import EmbeddingWrapper
 
 def newEmbeddingLayer(layer):
     """
@@ -21,7 +22,7 @@ def newEmbeddingLayer(layer):
         mask_zero=config.get('mask_zero', False),
         trainable=config.get('trainable', True)
     )
-    return new_layer
+    return EmbeddingWrapper(new_layer)
 
 def newSimpleRNNLayer(layer):
     """
@@ -71,7 +72,7 @@ def load_scratch_model(model):
     """
     Convert a Keras RNN model to a scratch implementation
     """
-    from predictRNN import EmbeddingWrapper  # Import the wrapper class
+      # Import the wrapper class
     
     ScratchModel = []
     

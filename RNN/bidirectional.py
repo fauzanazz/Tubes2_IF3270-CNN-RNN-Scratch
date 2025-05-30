@@ -35,10 +35,6 @@ class Bidirectional:
         
         if getattr(self.forward_layer, 'return_sequences', False):
             backward_output = np.flip(backward_output, axis=1)
-            # Add normalization before concatenation
-            concat_output = np.concatenate([forward_output, backward_output], axis=-1)
-            return (concat_output - np.mean(concat_output)) / (np.std(concat_output) + 1e-8)
+            return np.concatenate([forward_output, backward_output], axis=-1)
         else:
-            # For single output, concatenate and normalize final states
-            concat_output = np.concatenate([forward_output, backward_output], axis=-1)
-            return (concat_output - np.mean(concat_output)) / (np.std(concat_output) + 1e-8)
+            return np.concatenate([forward_output, backward_output], axis=-1)
