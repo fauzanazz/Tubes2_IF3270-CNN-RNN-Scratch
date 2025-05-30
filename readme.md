@@ -95,9 +95,12 @@ Program akan menghasilkan:
 - Forward propagation model CNN
 - Testing dan validasi terhadap Keras implementation
 
-### Anggota 3: [Nama] - NIM
+### Anggota 3: [Auralea Alvinia Syaikha] - 13522148
 **Tanggung Jawab: RNN Implementation**
--
+- Implementasi simple RNN
+- Forward propagation untuk bidirectional LSTM
+- Integration dengan Embedding dan Dense layers
+- Testing dan validasi terhadap Keras implementation
 
 ## 🔗 Dependencies
 
